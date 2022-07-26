@@ -1,0 +1,28 @@
+import os
+
+configfile: "config.yaml"
+include: "rules/mapping.smk"
+include: "rules/qc.smk"
+include: "rules/filtering.smk"
+include: "rules/bamToBw.smk"
+include: "rules/assemble_counts.smk"
+
+
+Sample,Read= glob_wildcards("data/{sample}_{read}.fastq.gz",followlinks = True)
+
+AlignmentFiles = ["Aligned.sortedByCoord.out.bam","Aligned.sortedByCoord.markdup.out.bam","Aligned.sortedByCoord.markdup.out.bam.bai","unfiltered_aligned_stats.tsv"]
+print(Sample)
+rule all:
+    input:
+        expand("pre-analysis/{sample}/fastqc/{sample}_{read}_fastqc.{extension}", sample=Sample,read=Read,extension=["zip","html"]),
+        expand("pre-analysis/{sample}/STAR/{files}", sample=Sample, files=AlignmentFiles),
+        expand("pre-analysis/{sample}/featureCounts/gene_count.txt",sample=Sample),
+        "pre-analysis/count-tables/raw_counts.tab",
+        "pre-analysis/alignment_stats.html",
+        expand("pre-analysis/ucsc/" + config["ref"]["build"] + "/{sample}.bw", sample=Sample),
+        expand("pre-analysis/ucsc/{file}",file= [config["ref"]["build"] + "/" + "trackDb.txt","genomes.txt","hub.txt"])
+        
+        
+
+
+
