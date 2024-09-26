@@ -1,28 +1,64 @@
 import os
+import yaml
+
+# Define the path to the config file
+config_path = "config.yaml"
+
+
+# Define the data structure for the YAML content
+data = {
+    'ref': {
+        'species': 'homo sapiens',  # Ensemble species name
+        'build': 'GRCh38',            # Genome build
+        'star': '/Users/bol7asan/media/scripts/resources/GRCh38/STAR',  # STAR genome files
+        'star_gtf': '/Users/bol7asan/media/scripts/resources/GRCh38/gencode.v46.chr_patch_hapl_scaff.annotation.gff3'  # GTF file for STAR
+    }
+}
+
+# Check if the config file already exists
+if not os.path.exists(config_path):
+    with open(config_path, 'w') as file:
+        yaml.dump(data, file, default_flow_style=False)
+    print(f"Config file '{config_path}' has been created.")
+else:
+    print(f"Config file '{config_path}' already exists.")
 
 configfile: "config.yaml"
+
+# Include additional rule files
 include: "rules/mapping.smk"
 include: "rules/qc.smk"
-include: "rules/filtering.smk"
-include: "rules/bamToBw.smk"
-include: "rules/assemble_counts.smk"
+# include: "rules/filtering.smk"
+# include: "rules/bamToBw.smk"
+# include: "rules/assemble_counts.smk"
 
+# Identify samples and reads from the fastq files
+samples, reads = glob_wildcards("data/{sample}_{read}.fastq.gz", followlinks=True)
 
-Sample,Read= glob_wildcards("data/{sample}_{read}.fastq.gz",followlinks = True)
+##"Aligned.sortedByCoord.markdup.out.bam","Aligned.sortedByCoord.markdup.out.bam.bai","unfiltered_aligned_stats.tsv"
+# List of alignment files to be generated
+alignment_files = ["Aligned.sortedByCoord.out.bam"]
 
-AlignmentFiles = ["Aligned.sortedByCoord.out.bam","Aligned.sortedByCoord.markdup.out.bam","Aligned.sortedByCoord.markdup.out.bam.bai","unfiltered_aligned_stats.tsv"]
-print(Sample)
+# Rule for executing all required tasks
 rule all:
     input:
-        expand("pre-analysis/{sample}/fastqc/{sample}_{read}_fastqc.{extension}", sample=Sample,read=Read,extension=["zip","html"]),
-        expand("pre-analysis/{sample}/STAR/{files}", sample=Sample, files=AlignmentFiles),
-        expand("pre-analysis/{sample}/featureCounts/gene_count.txt",sample=Sample),
-        "pre-analysis/count-tables/raw_counts.tab",
-        "pre-analysis/alignment_stats.html",
-        expand("pre-analysis/ucsc/" + config["ref"]["build"] + "/{sample}.bw", sample=Sample),
-        expand("pre-analysis/ucsc/{file}",file= [config["ref"]["build"] + "/" + "trackDb.txt","genomes.txt","hub.txt"])
+        # FastQC results
+        expand("pre-analysis/{sample}/fastqc/{sample}_{read}_fastqc.{extension}", sample=samples, read=reads, extension=["zip", "html"]),
         
+        # # STAR alignment files
+        expand("pre-analysis/{sample}/STAR/{file}", sample=samples, file=alignment_files),
         
-
-
-
+        # # Gene count file
+        # expand("pre-analysis/{sample}/featureCounts/gene_count.txt", sample=samples),
+        
+        # # Count table and alignment stats
+        # "pre-analysis/count-tables/raw_counts.tab",
+        # "pre-analysis/alignment_stats.html",
+        
+        # # UCSC bigWig and track files
+        # expand(os.path.join("pre-analysis", "ucsc", config["ref"]["build"], "{sample}.bw"), sample=samples),
+        # expand(os.path.join("pre-analysis", "ucsc/{file}"), file=[
+        #     os.path.join(config["ref"]["build"], "trackDb.txt"),
+        #     "genomes.txt",
+        #     "hub.txt"
+        # ])

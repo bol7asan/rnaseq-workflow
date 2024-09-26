@@ -2,17 +2,16 @@ rule fastqc:
     input:
         rawread="data/{sample}_{read}.fastq.gz"
     output:
-        zip ="pre-analysis/{sample}/fastqc/{sample}_{read}_fastqc.zip",
+        zip="pre-analysis/{sample}/fastqc/{sample}_{read}_fastqc.zip",
         html="pre-analysis/{sample}/fastqc/{sample}_{read}_fastqc.html"
     threads: 1
     
+    container:
+        "docker://biocontainers/fastqc:v0.11.9_cv8"  # Apptainer will pull this Docker image
     conda:
-        "ngsmo"
-
-    params:
-        path="pre-analysis/{sample}/fastqc/"
+        "ngs-env"
     shell:
-        "fastqc {input.rawread} --threads {threads} -o {params.path}"
+        "fastqc {input.rawread} --threads {threads} -o pre-analysis/{wildcards.sample}/fastqc/"
 
 
 
